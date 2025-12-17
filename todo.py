@@ -16,37 +16,41 @@ def init_db():
 
 init_db()
 
+def insert_todo(title, completed):
+  with sqlite3.connect('todo.db') as conn:
+    cursor = conn.cursor()
+    cursor.execute('INSERT INTO todos (title, completed) VALUES (?, ?)', (title, completed)) 
+    conn.commit()
+    return [{'id': cursor.lastrowid, 'title': title, 'completed': completed}]
+
+def select_todo(id = None):
+  if id == None:
+    sql = 'SELECT * FROM todos WHERE completed = 0'
+  elif id > 0:
+    sql = 'SELECT * FROM todos WHERE id = ' + str(id)
+  with sqlite3.connect('todo.db') as conn:
+    cursor = conn.cursor()
+    cursor.execute(sql)
+    todos = cursor.fetchall()
+    todo_list = [ {'id': row[0], 'title': row[1], 'completed': bool(row[2]) } for row in todos ] 
+  return todo_list
+
 # POST /todo - lägga till en uppgift
 @app.route('/todo', methods=['POST'])
 def create_todo():
   data = request.get_json()
   title = data.get('title')
-  with sqlite3.connect('todo.db') as conn:
-    cursor = conn.cursor()
-    cursor.execute('INSERT INTO todos (title, completed) VALUES (?, ?)', (title, False))
-    conn.commit()
-    new_task_id = cursor.lastrowid
-  return jsonify({'id': new_task_id, 'title': title, 'completed': False}), 201
+  return insert_todo(title, False), 201
 
 # GET /todo - hämta alla uppgifter
 @app.route('/todo', methods=['GET'])
 def get_todos():
-  with sqlite3.connect('todo.db') as conn:
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM todos WHERE completed = 0')
-    todos = cursor.fetchall()
-    todo_list = [ {'id': row[0], 'title': row[1], 'completed': bool(row[2]) } for row in todos ]
-  return jsonify(todo_list), 200
+  return jsonify(select_todo()), 200
 
 # GET /todo/1 - hämtar en specifik uppgift
 @app.route('/todo/<int:todo_id>', methods=['GET'])
 def get_todo(todo_id):
-  with sqlite3.connect('todo.db') as conn:
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM todos WHERE id = ?', str(todo_id))
-    todos = cursor.fetchall()
-    todo_list = [ {'id': row[0], 'title': row[1], 'completed': bool(row[2]) } for row in todos ]
-  return jsonify(todo_list), 200
+  return jsonify(select_todo(todo_id)), 200
 
 # PUT /todo/1 - markera som klar
 @app.route('/todo/<int:todo_id>', methods=['PUT'])
