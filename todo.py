@@ -41,7 +41,12 @@ def get_todos():
 # GET /todo/1 - hämtar en specifik uppgift
 @app.route('/todo/<int:todo_id>', methods=['GET'])
 def get_todo(todo_id):
-  return "get todo"
+  with sqlite3.connect('todo.db') as conn:
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM todos WHERE id = ?', str(todo_id))
+    todos = cursor.fetchall()
+    todo_list = [ {'id': row[0], 'title': row[1], 'completed': bool(row[2]) } for row in todos ]
+  return jsonify(todo_list), 200
 
 # PUT /todo/1 - markera som klar
 @app.route('/todo/<int:todo_id>', methods=['PUT'])
